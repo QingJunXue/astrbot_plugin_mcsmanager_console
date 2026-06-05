@@ -18,6 +18,7 @@ HELP_TEXT = """MCSManager Console
 /mcs 命令 <实例编号|实例名> <命令>
 
 其他命令：
+/mcs 概览：查看仪表盘图片
 /mcs 实例：查看所有实例
 /mcs 强杀 <实例编号|实例名>
 /mcs 删除 <实例编号|实例名>
@@ -25,6 +26,7 @@ HELP_TEXT = """MCSManager Console
 /mcs 配置 <节点ID> <实例ID> <JSON配置>
 
 示例：
+/mcs 概览
 /mcs 节点
 /mcs 实例 1
 /mcs 启动 1
@@ -32,7 +34,7 @@ HELP_TEXT = """MCSManager Console
 /mcs 命令 2 say hello"""
 
 
-def format_daemons(data: Any, *, numbered: bool = False) -> str:
+def format_daemons(data: Any, *, numbered: bool = False, show_ids: bool = True) -> str:
     items = _as_items(data)
     if not items:
         return "没有获取到节点。"
@@ -43,13 +45,14 @@ def format_daemons(data: Any, *, numbered: bool = False) -> str:
         status = _pick(item, "available", "status", "state", default="未知")
         address = _pick(item, "ip", "addr", "address", default="")
         prefix = f"[{index}] " if numbered else "- "
-        lines.append(f"{prefix}{name} | ID: {daemon_id or '未知'} | 状态: {_status_text(status)}{_suffix(address)}")
+        id_part = f" | ID: {daemon_id or '未知'}" if show_ids else ""
+        lines.append(f"{prefix}{name}{id_part} | 状态: {_status_text(status)}{_suffix(address)}")
     if numbered:
         lines.append("\n可直接用节点编号、节点名或节点ID查看实例，例如：/mcs 实例 1")
     return "\n".join(lines)
 
 
-def format_instances(data: Any, *, numbered: bool = False) -> str:
+def format_instances(data: Any, *, numbered: bool = False, show_ids: bool = True) -> str:
     items = _as_items(data)
     if not items:
         return "没有获取到实例。"
@@ -60,14 +63,15 @@ def format_instances(data: Any, *, numbered: bool = False) -> str:
         name = _pick(item, "nickname", "name", "config.nickname", default="未命名实例")
         status = _pick(item, "status", "started", "state", default="未知")
         prefix = f"[{index}] " if numbered else "- "
-        daemon_part = f" | 节点: {daemon_id}" if daemon_id else ""
-        lines.append(f"{prefix}{name} | 状态: {_status_text(status)} | ID: {instance_id or '未知'}{daemon_part}")
+        id_part = f" | ID: {instance_id or '未知'}" if show_ids else ""
+        daemon_part = f" | 节点: {daemon_id}" if show_ids and daemon_id else ""
+        lines.append(f"{prefix}{name} | 状态: {_status_text(status)}{id_part}{daemon_part}")
     if numbered:
         lines.append("\n可直接使用编号、实例名或简称操作，例如：/mcs 启动 1")
     return "\n".join(lines)
 
 
-def format_instance_detail(data: Any) -> str:
+def format_instance_detail(data: Any, *, show_ids: bool = True) -> str:
     item = _first_dict(data)
     if not item:
         return "没有获取到实例详情。"
@@ -78,9 +82,10 @@ def format_instance_detail(data: Any) -> str:
     lines = [
         "实例详情",
         f"名称: {name}",
-        f"ID: {instance_id}",
-        f"状态: {_status_text(status)}",
     ]
+    if show_ids:
+        lines.append(f"ID: {instance_id}")
+    lines.append(f"状态: {_status_text(status)}")
     if end_time:
         lines.append(f"到期/结束时间: {end_time}")
     return "\n".join(lines)

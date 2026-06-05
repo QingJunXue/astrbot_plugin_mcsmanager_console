@@ -22,6 +22,9 @@ class MCSManagerClient:
     async def close(self) -> None:
         await self._client.aclose()
 
+    async def overview(self) -> Any:
+        return await self.get("/api/overview")
+
     async def list_daemons(self) -> Any:
         return await self.get("/api/service/remote_services")
 

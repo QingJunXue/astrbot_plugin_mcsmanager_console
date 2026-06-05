@@ -8,6 +8,9 @@ AstrBot 插件：通过 `/mcs` 聊天命令管理 MCSManager。
 - `api_key`：MCSManager API Key
 - `admin_whitelist`：允许执行管理命令的用户 ID / 群 ID / 平台 ID
 - `log_max_lines`：日志命令最多返回行数
+- `show_ids`：是否在节点列表、实例列表、实例详情中显示 ID；关闭后实例列表中的节点 ID 也会隐藏
+- `overview_font_path`：仪表盘图片字体路径，默认 `C:/Windows/Fonts/msyh.ttc`
+- `overview_font_download_url`：微软雅黑字体直连下载地址，默认 `https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip`
 
 ## 简单用法
 
@@ -37,6 +40,7 @@ AstrBot 插件：通过 `/mcs` 聊天命令管理 MCSManager。
 示例：
 
 ```text
+/mcs 概览
 /mcs 节点
 /mcs 实例 1
 /mcs 启动 1
@@ -47,6 +51,7 @@ AstrBot 插件：通过 `/mcs` 聊天命令管理 MCSManager。
 ## 其他命令
 
 ```text
+/mcs 概览
 /mcs 节点
 /mcs 实例
 /mcs 实例 <节点编号|节点名|节点ID>
@@ -56,6 +61,8 @@ AstrBot 插件：通过 `/mcs` 聊天命令管理 MCSManager。
 /mcs 配置 <节点ID> <实例ID> <JSON配置>
 /mcs 帮助
 ```
+
+`概览`、`仪表盘`、`overview`、`dashboard` 都可以用于查看仪表盘图片。
 
 `实例`、`实列`、`list`、`ls` 都可以用于查看实例。
 

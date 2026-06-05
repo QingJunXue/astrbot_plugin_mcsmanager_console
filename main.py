@@ -1,6 +1,7 @@
 import json
 import shlex
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any
 
 from astrbot.api import logger
@@ -18,11 +19,17 @@ from .formatters import (
     format_instances,
     format_logs,
 )
+from .overview_image import render_overview_image
 
 PLUGIN_VERSION = "1.0.0"
 
 ACTION_ALIASES = {
+    "dashboard": "概览",
+    "overview": "概览",
+    "仪表盘": "概览",
+    "概览": "概览",
     "node": "节点",
+    "节点": "节点",
     "nodes": "节点",
     "daemon": "节点",
     "daemons": "节点",
@@ -82,13 +89,13 @@ class MCSManagerConsolePlugin(Star):
         except Exception as exc:
             logger.error(f"MCSManager Console unexpected error: {exc}")
             result = "MCSManager Console 执行失败，请查看 AstrBot 日志。"
-        yield event.plain_result(result)
+        yield event.image_result(str(result)) if isinstance(result, Path) else event.plain_result(result)
 
     async def terminate(self):
         if self.client is not None:
             await self.client.close()
 
-    async def _dispatch(self, event: AstrMessageEvent) -> str:
+    async def _dispatch(self, event: AstrMessageEvent) -> str | Path:
         parts = _parse_args(event.message_str)
         if not parts:
             return HELP_TEXT
@@ -97,7 +104,7 @@ class MCSManagerConsolePlugin(Star):
         if action == "帮助":
             return HELP_TEXT
 
-        if action in {"节点", "实例", "详情"}:
+        if action in {"概览", "节点", "实例", "详情"}:
             self.config.require_ready()
         else:
             self.config.require_ready()
@@ -106,18 +113,26 @@ class MCSManagerConsolePlugin(Star):
         client = self._get_client()
         option_key = _option_key(event)
 
+        if action == "概览":
+            return Path(
+                render_overview_image(
+                    await client.overview(),
+                    font_path=self.config.overview_font_path,
+                    font_download_url=self.config.overview_font_download_url,
+                )
+            )
         if action == "节点":
             daemons = _data_items(await client.list_daemons())
             self.daemon_options[option_key] = daemons
-            return format_daemons(daemons, numbered=True)
+            return format_daemons(daemons, numbered=True, show_ids=self.config.show_ids)
         if action == "实例":
             daemon_id = self._resolve_daemon_selector(option_key, parts[1]) if len(parts) >= 2 else None
             instances = await _load_instances(client, daemon_id)
             self.instance_options[option_key] = instances
-            return format_instances(instances, numbered=True)
+            return format_instances(instances, numbered=True, show_ids=self.config.show_ids)
         if action == "详情":
             daemon_id, instance_id = await self._resolve_instance_args(client, option_key, parts, 1)
-            return format_instance_detail(await client.instance_detail(daemon_id, instance_id))
+            return format_instance_detail(await client.instance_detail(daemon_id, instance_id), show_ids=self.config.show_ids)
         if action in PROCESS_ACTIONS:
             daemon_id, instance_id = await self._resolve_instance_args(client, option_key, parts, 1)
             data = await PROCESS_ACTIONS[action](client, daemon_id, instance_id)

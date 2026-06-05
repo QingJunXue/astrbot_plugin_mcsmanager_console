@@ -10,6 +10,9 @@ class PluginConfig:
     api_key: str
     admin_whitelist: frozenset[str]
     log_max_lines: int
+    show_ids: bool
+    overview_font_path: str
+    overview_font_download_url: str
 
     @classmethod
     def from_astrbot(cls, config: Any) -> "PluginConfig":
@@ -17,12 +20,24 @@ class PluginConfig:
         api_key = _read_config(config, "api_key", "").strip()
         whitelist = _normalize_whitelist(_read_config(config, "admin_whitelist", []))
         log_max_lines = _normalize_log_lines(_read_config(config, "log_max_lines", 50))
+        show_ids = _normalize_bool(_read_config(config, "show_ids", True))
+        overview_font_path = str(_read_config(config, "overview_font_path", "C:/Windows/Fonts/msyh.ttc")).strip()
+        overview_font_download_url = str(
+            _read_config(
+                config,
+                "overview_font_download_url",
+                "https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
+            )
+        ).strip()
 
         return cls(
             base_url=base_url,
             api_key=api_key,
             admin_whitelist=frozenset(whitelist),
             log_max_lines=log_max_lines,
+            show_ids=show_ids,
+            overview_font_path=overview_font_path,
+            overview_font_download_url=overview_font_download_url,
         )
 
     def require_ready(self) -> None:
@@ -84,6 +99,14 @@ def _normalize_log_lines(value: Any) -> int:
     except (TypeError, ValueError):
         lines = 50
     return min(max(lines, 1), 500)
+
+
+def _normalize_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off", "关闭", "否"}
+    return bool(value)
 
 
 def _call_or_attr(target: Any, name: str) -> Any:

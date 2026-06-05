@@ -18,5 +18,20 @@
     "description": "日志命令单次最多显示的日志行数。",
     "type": "int",
     "default": 50
+  },
+  "show_ids": {
+    "description": "是否在节点列表、实例列表中显示节点 ID、实例 ID。关闭后实例列表中的节点 ID 也会隐藏。",
+    "type": "bool",
+    "default": true
+  },
+  "overview_font_path": {
+    "description": "仪表盘图片字体路径。默认使用 Windows 微软雅黑 C:/Windows/Fonts/msyh.ttc；Linux 可填写下载解压后的 msyh.ttf 路径。",
+    "type": "string",
+    "default": "C:/Windows/Fonts/msyh.ttc"
+  },
+  "overview_font_download_url": {
+    "description": "微软雅黑字体直连下载地址，用于部署环境缺少字体时手动下载。已验证 raw.githubusercontent.com 直链可用。",
+    "type": "string",
+    "default": "https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip"
   }
 }
