@@ -3,27 +3,30 @@ from typing import Any
 
 
 HELP_TEXT = """MCSManager Console
-常用命令：
-/mcs 节点：查看节点
-/mcs 实例：查看所有实例
-/mcs 实例 <节点ID>：查看指定节点实例
-/mcs 详情 <实例ID>：查看实例详情
-/mcs 启动 <实例ID>：启动实例
-/mcs 停止 <实例ID>：停止实例
-/mcs 重启 <实例ID>：重启实例
-/mcs 日志 <实例ID>：查看实例日志
-/mcs 命令 <实例ID> <命令>：发送控制台命令
+先看实例：
+/mcs 实例 <节点ID>
 
-完整写法：
-/mcs 详情 <节点ID> <实例ID>
-/mcs 启动|停止|重启|强杀 <节点ID> <实例ID>
-/mcs 日志 <节点ID> <实例ID>
-/mcs 命令 <节点ID> <实例ID> <命令>
+然后直接用编号、实例名或简称操作：
+/mcs 详情 <编号|实例名>
+/mcs 启动 <编号|实例名>
+/mcs 停止 <编号|实例名>
+/mcs 重启 <编号|实例名>
+/mcs 日志 <编号|实例名>
+/mcs 命令 <编号|实例名> <命令>
+
+其他命令：
+/mcs 节点
+/mcs 实例：查看所有实例
+/mcs 强杀 <编号|实例名>
+/mcs 删除 <编号|实例名>
 /mcs 创建 <节点ID> <JSON配置>
-/mcs 删除 <实例ID>
 /mcs 配置 <节点ID> <实例ID> <JSON配置>
 
-提示：实例、实列、list、ls 都可以查看实例。"""
+示例：
+/mcs 实例 67fb9a18ecc0459580bb85433f3b1c8d
+/mcs 启动 1
+/mcs 日志 生存服
+/mcs 命令 2 say hello"""
 
 
 def format_daemons(data: Any) -> str:
@@ -40,18 +43,21 @@ def format_daemons(data: Any) -> str:
     return "\n".join(lines)
 
 
-def format_instances(data: Any) -> str:
+def format_instances(data: Any, *, numbered: bool = False) -> str:
     items = _as_items(data)
     if not items:
         return "没有获取到实例。"
     lines = ["MCSManager 实例"]
-    for item in items:
+    for index, item in enumerate(items, start=1):
         daemon_id = _pick(item, "daemonId", "daemon_id", "remoteServiceUuid")
         instance_id = _pick(item, "uuid", "instanceUuid", "id")
         name = _pick(item, "nickname", "name", "config.nickname", default="未命名实例")
         status = _pick(item, "status", "started", "state", default="未知")
+        prefix = f"{index}. " if numbered else "- "
         daemon_part = f" | 节点: {daemon_id}" if daemon_id else ""
-        lines.append(f"- {name} | ID: {instance_id or '未知'} | 状态: {_status_text(status)}{daemon_part}")
+        lines.append(f"{prefix}{name} | 状态: {_status_text(status)} | ID: {instance_id or '未知'}{daemon_part}")
+    if numbered:
+        lines.append("\n可直接使用编号、实例名或简称操作，例如：/mcs 启动 1")
     return "\n".join(lines)
 
 
