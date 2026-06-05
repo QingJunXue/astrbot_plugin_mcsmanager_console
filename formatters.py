@@ -3,19 +3,27 @@ from typing import Any
 
 
 HELP_TEXT = """MCSManager Console
-/mcs 节点：查看节点状态
-/mcs 实例 <节点ID>：列出指定节点实例
-/mcs 详情 <节点ID> <实例ID>：查看实例状态
-/mcs 启动 <节点ID> <实例ID>：启动实例
-/mcs 停止 <节点ID> <实例ID>：停止实例
-/mcs 重启 <节点ID> <实例ID>：重启实例
-/mcs 强杀 <节点ID> <实例ID>：强制结束实例进程
-/mcs 命令 <节点ID> <实例ID> <命令>：发送控制台命令
-/mcs 日志 <节点ID> <实例ID>：查看实例日志
-/mcs 创建 <节点ID> <JSON配置>：创建实例
-/mcs 删除 <节点ID> <实例ID>：删除实例
-/mcs 配置 <节点ID> <实例ID> <JSON配置>：更新实例配置
-/mcs 帮助：展示本说明"""
+常用命令：
+/mcs 节点：查看节点
+/mcs 实例：查看所有实例
+/mcs 实例 <节点ID>：查看指定节点实例
+/mcs 详情 <实例ID>：查看实例详情
+/mcs 启动 <实例ID>：启动实例
+/mcs 停止 <实例ID>：停止实例
+/mcs 重启 <实例ID>：重启实例
+/mcs 日志 <实例ID>：查看实例日志
+/mcs 命令 <实例ID> <命令>：发送控制台命令
+
+完整写法：
+/mcs 详情 <节点ID> <实例ID>
+/mcs 启动|停止|重启|强杀 <节点ID> <实例ID>
+/mcs 日志 <节点ID> <实例ID>
+/mcs 命令 <节点ID> <实例ID> <命令>
+/mcs 创建 <节点ID> <JSON配置>
+/mcs 删除 <实例ID>
+/mcs 配置 <节点ID> <实例ID> <JSON配置>
+
+提示：实例、实列、list、ls 都可以查看实例。"""
 
 
 def format_daemons(data: Any) -> str:
@@ -35,13 +43,15 @@ def format_daemons(data: Any) -> str:
 def format_instances(data: Any) -> str:
     items = _as_items(data)
     if not items:
-        return "该节点没有获取到实例。"
+        return "没有获取到实例。"
     lines = ["MCSManager 实例"]
     for item in items:
+        daemon_id = _pick(item, "daemonId", "daemon_id", "remoteServiceUuid")
         instance_id = _pick(item, "uuid", "instanceUuid", "id")
         name = _pick(item, "nickname", "name", "config.nickname", default="未命名实例")
         status = _pick(item, "status", "started", "state", default="未知")
-        lines.append(f"- {name} | ID: {instance_id or '未知'} | 状态: {_status_text(status)}")
+        daemon_part = f" | 节点: {daemon_id}" if daemon_id else ""
+        lines.append(f"- {name} | ID: {instance_id or '未知'} | 状态: {_status_text(status)}{daemon_part}")
     return "\n".join(lines)
 
 

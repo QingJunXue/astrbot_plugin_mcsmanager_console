@@ -1,7 +1,7 @@
 name: astrbot_plugin_mcsmanager_console
 display_name: MCSManager Console
 desc: 通过 /mcs 聊天命令管理 MCSManager 节点、实例、日志与配置。
-version: 0.1.0
+version: 1.0.0
 author: QingJunXue
 repo: https://github.com/QingJunXue/astrbot_plugin_mcsmanager_console
 short_desc: MCSManager 聊天控制台

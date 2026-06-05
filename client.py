@@ -15,7 +15,7 @@ class MCSManagerClient:
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "User-Agent": "astrbot-plugin-mcsmanager-console/0.1.0",
+                "User-Agent": "astrbot-plugin-mcsmanager-console/1.0.0",
             },
         )
 
