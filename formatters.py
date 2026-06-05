@@ -3,43 +3,49 @@ from typing import Any
 
 
 HELP_TEXT = """MCSManager Console
-先看实例：
-/mcs 实例 <节点ID>
+先看节点：
+/mcs 节点
 
-然后直接用编号、实例名或简称操作：
-/mcs 详情 <编号|实例名>
-/mcs 启动 <编号|实例名>
-/mcs 停止 <编号|实例名>
-/mcs 重启 <编号|实例名>
-/mcs 日志 <编号|实例名>
-/mcs 命令 <编号|实例名> <命令>
+再用节点编号、节点名或节点ID查看实例：
+/mcs 实例 <节点编号|节点名|节点ID>
+
+然后直接用实例编号、实例名或简称操作：
+/mcs 详情 <实例编号|实例名>
+/mcs 启动 <实例编号|实例名>
+/mcs 停止 <实例编号|实例名>
+/mcs 重启 <实例编号|实例名>
+/mcs 日志 <实例编号|实例名>
+/mcs 命令 <实例编号|实例名> <命令>
 
 其他命令：
-/mcs 节点
 /mcs 实例：查看所有实例
-/mcs 强杀 <编号|实例名>
-/mcs 删除 <编号|实例名>
+/mcs 强杀 <实例编号|实例名>
+/mcs 删除 <实例编号|实例名>
 /mcs 创建 <节点ID> <JSON配置>
 /mcs 配置 <节点ID> <实例ID> <JSON配置>
 
 示例：
-/mcs 实例 67fb9a18ecc0459580bb85433f3b1c8d
+/mcs 节点
+/mcs 实例 1
 /mcs 启动 1
 /mcs 日志 生存服
 /mcs 命令 2 say hello"""
 
 
-def format_daemons(data: Any) -> str:
+def format_daemons(data: Any, *, numbered: bool = False) -> str:
     items = _as_items(data)
     if not items:
         return "没有获取到节点。"
     lines = ["MCSManager 节点"]
-    for item in items:
+    for index, item in enumerate(items, start=1):
         daemon_id = _pick(item, "uuid", "id", "daemonId", "remoteServiceUuid")
         name = _pick(item, "remarks", "name", "ip", default="未命名节点")
         status = _pick(item, "available", "status", "state", default="未知")
         address = _pick(item, "ip", "addr", "address", default="")
-        lines.append(f"- {name} | ID: {daemon_id or '未知'} | 状态: {_status_text(status)}{_suffix(address)}")
+        prefix = f"{index}. " if numbered else "- "
+        lines.append(f"{prefix}{name} | ID: {daemon_id or '未知'} | 状态: {_status_text(status)}{_suffix(address)}")
+    if numbered:
+        lines.append("\n可直接用节点编号、节点名或节点ID查看实例，例如：/mcs 实例 1")
     return "\n".join(lines)
 
 

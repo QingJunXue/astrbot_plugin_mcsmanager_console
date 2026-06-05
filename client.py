@@ -26,7 +26,17 @@ class MCSManagerClient:
         return await self.get("/api/service/remote_services")
 
     async def list_instances(self, daemon_id: str) -> Any:
-        return await self.get("/api/service/remote_service_instances", daemonId=daemon_id)
+        last_error: MCSManagerAPIError | None = None
+        for params in _instance_list_param_sets(daemon_id):
+            try:
+                return await self.get("/api/service/remote_service_instances", **params)
+            except MCSManagerAPIError as exc:
+                last_error = exc
+                if "参数" not in str(exc):
+                    raise
+        if last_error is not None:
+            raise last_error
+        return []
 
     async def instance_detail(self, daemon_id: str, instance_id: str) -> Any:
         return await self.get("/api/instance", daemonId=daemon_id, uuid=instance_id)
@@ -119,6 +129,17 @@ def _is_failed_payload(payload: Any) -> bool:
     if isinstance(code, int) and code not in {0, 200}:
         return True
     return False
+
+
+def _instance_list_param_sets(daemon_id: str) -> list[dict[str, Any]]:
+    return [
+        {"daemonId": daemon_id, "page": 1, "page_size": 100, "status": ""},
+        {"daemonId": daemon_id, "page": 1, "page_size": 100, "status": "running"},
+        {"daemonId": daemon_id, "page": 1, "page_size": 100, "status": "stopped"},
+        {"daemonId": daemon_id, "page": 1, "pageSize": 100, "status": ""},
+        {"remote_uuid": daemon_id, "page": 1, "page_size": 100, "status": ""},
+        {"uuid": daemon_id, "page": 1, "page_size": 100, "status": ""},
+    ]
 
 
 def _unwrap_payload(payload: Any) -> Any:

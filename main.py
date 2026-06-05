@@ -69,6 +69,7 @@ class MCSManagerConsolePlugin(Star):
         super().__init__(context)
         self.config = PluginConfig.from_astrbot(config)
         self.client: MCSManagerClient | None = None
+        self.daemon_options: dict[str, list[dict[str, Any]]] = {}
         self.instance_options: dict[str, list[dict[str, Any]]] = {}
 
     @filter.command("mcs")
@@ -106,9 +107,12 @@ class MCSManagerConsolePlugin(Star):
         option_key = _option_key(event)
 
         if action == "节点":
-            return format_daemons(await client.list_daemons())
+            daemons = _data_items(await client.list_daemons())
+            self.daemon_options[option_key] = daemons
+            return format_daemons(daemons, numbered=True)
         if action == "实例":
-            instances = await _load_instances(client, parts[1] if len(parts) >= 2 else None)
+            daemon_id = self._resolve_daemon_selector(option_key, parts[1]) if len(parts) >= 2 else None
+            instances = await _load_instances(client, daemon_id)
             self.instance_options[option_key] = instances
             return format_instances(instances, numbered=True)
         if action == "详情":
@@ -142,6 +146,12 @@ class MCSManagerConsolePlugin(Star):
         if self.client is None:
             self.client = MCSManagerClient(self.config.base_url, self.config.api_key)
         return self.client
+
+    def _resolve_daemon_selector(self, option_key: str, selector: str) -> str:
+        matched = _match_cached_daemon(self.daemon_options.get(option_key, []), selector)
+        if matched is not None:
+            return _daemon_id(matched)
+        return selector.strip()
 
     async def _resolve_instance_args(
         self,
@@ -296,10 +306,72 @@ def _match_cached_instance(instances: list[dict[str, Any]], selector: str) -> di
     return None
 
 
+def _match_cached_daemon(daemons: list[dict[str, Any]], selector: str) -> dict[str, Any] | None:
+    selector = selector.strip()
+    if not selector:
+        return None
+
+    if selector.isdigit():
+        index = int(selector) - 1
+        if 0 <= index < len(daemons):
+            return daemons[index]
+
+    exact_matches = [item for item in daemons if selector in _daemon_match_keys(item)]
+    if len(exact_matches) == 1:
+        return exact_matches[0]
+    if len(exact_matches) > 1:
+        names = "、".join(_daemon_name(item) for item in exact_matches[:5])
+        raise ConfigError(f"匹配到多个节点：{names}。请使用节点列表编号。")
+
+    selector_lower = selector.lower()
+    fuzzy_matches = [
+        item
+        for item in daemons
+        if any(selector_lower in key.lower() for key in _daemon_match_keys(item))
+    ]
+    if len(fuzzy_matches) == 1:
+        return fuzzy_matches[0]
+    if len(fuzzy_matches) > 1:
+        names = "、".join(_daemon_name(item) for item in fuzzy_matches[:5])
+        raise ConfigError(f"匹配到多个节点：{names}。请使用节点列表编号。")
+
+    return None
+
+
+def _daemon_match_keys(item: dict[str, Any]) -> set[str]:
+    keys = {
+        str(_pick(item, "uuid")),
+        str(_pick(item, "id")),
+        str(_pick(item, "daemonId")),
+        str(_pick(item, "remoteServiceUuid")),
+        str(_pick(item, "remarks")),
+        str(_pick(item, "name")),
+        str(_pick(item, "ip")),
+        str(_pick(item, "addr")),
+        str(_pick(item, "address")),
+    }
+    return {key.strip() for key in keys if key.strip()}
+
+
+def _daemon_name(item: dict[str, Any]) -> str:
+    return str(_pick(item, "remarks", "name", "ip") or _daemon_id(item) or "未命名节点")
+
+
+def _daemon_id(item: dict[str, Any]) -> str:
+    daemon_id = str(_pick(item, "uuid", "id", "daemonId", "remoteServiceUuid") or "").strip()
+    if not daemon_id:
+        raise ConfigError("节点数据缺少节点ID。")
+    return daemon_id
+
+
 def _instance_match_keys(item: dict[str, Any]) -> set[str]:
     keys = {
-        str(_pick(item, "uuid", "instanceUuid", "id")),
-        str(_pick(item, "nickname", "name", "config.nickname")),
+        str(_pick(item, "uuid")),
+        str(_pick(item, "instanceUuid")),
+        str(_pick(item, "id")),
+        str(_pick(item, "nickname")),
+        str(_pick(item, "name")),
+        str(_pick(item, "config.nickname")),
     }
     return {key.strip() for key in keys if key.strip()}
 
