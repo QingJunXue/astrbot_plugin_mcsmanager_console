@@ -9,7 +9,7 @@ from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
 
 from .client import MCSManagerClient
-from .config import PluginConfig, collect_event_identities
+from .config import PluginConfig, collect_event_group_identities, collect_event_user_identities
 from .errors import ConfigError, MCSManagerConsoleError
 from .formatters import (
     HELP_TEXT,
@@ -63,6 +63,7 @@ ACTION_ALIASES = {
     "-h": "帮助",
     "--help": "帮助",
 }
+PUBLIC_ACTIONS = {"概览", "节点", "实例", "详情"}
 
 
 @register(
@@ -79,9 +80,7 @@ class MCSManagerConsolePlugin(Star):
         self.daemon_options: dict[str, list[dict[str, Any]]] = {}
         self.instance_options: dict[str, list[dict[str, Any]]] = {}
 
-    @filter.command("mcs")
-    async def mcs(self, event: AstrMessageEvent):
-        """MCSManager Console 命令入口。"""
+    async def _reply(self, event: AstrMessageEvent):
         try:
             result = await self._dispatch(event)
         except MCSManagerConsoleError as exc:
@@ -90,6 +89,26 @@ class MCSManagerConsolePlugin(Star):
             logger.error(f"MCSManager Console unexpected error: {exc}")
             result = "MCSManager Console 执行失败，请查看 AstrBot 日志。"
         yield event.image_result(str(result)) if isinstance(result, Path) else event.plain_result(result)
+
+    @filter.command("mcs")
+    async def mcs(self, event: AstrMessageEvent):
+        """MCSManager Console 命令入口。"""
+        if self._should_ignore_group_event(event):
+            return
+        async for result in self._reply(event):
+            yield result
+        event.stop_event()
+
+    @filter.event_message_type(filter.EventMessageType.ALL, priority=100)
+    async def mcs_plain_text(self, event: AstrMessageEvent):
+        """兼容群聊中未带斜杠的 mcs 文本命令。"""
+        if not _is_mcs_message(event.message_str):
+            return
+        if self._should_ignore_group_event(event):
+            return
+        async for result in self._reply(event):
+            yield result
+        event.stop_event()
 
     async def terminate(self):
         if self.client is not None:
@@ -104,11 +123,12 @@ class MCSManagerConsolePlugin(Star):
         if action == "帮助":
             return HELP_TEXT
 
-        if action in {"概览", "节点", "实例", "详情"}:
-            self.config.require_ready()
-        else:
-            self.config.require_ready()
-            self.config.require_admin(collect_event_identities(event))
+        if _is_group_event(event) and not self.config.is_group_enabled(collect_event_group_identities(event)):
+            raise ConfigError("当前群聊未启用 MCSManager Console。")
+
+        self.config.require_ready()
+        if action not in PUBLIC_ACTIONS:
+            self.config.require_admin(collect_event_user_identities(event))
 
         client = self._get_client()
         option_key = _option_key(event)
@@ -160,6 +180,9 @@ class MCSManagerConsolePlugin(Star):
         if self.client is None:
             self.client = MCSManagerClient(self.config.base_url, self.config.api_key)
         return self.client
+
+    def _should_ignore_group_event(self, event: AstrMessageEvent) -> bool:
+        return _is_group_event(event) and not self.config.is_group_enabled(collect_event_group_identities(event))
 
     def _resolve_daemon_selector(self, option_key: str, selector: str) -> str:
         matched = _match_cached_daemon(self.daemon_options.get(option_key, []), selector)
@@ -245,13 +268,33 @@ PROCESS_ACTIONS: dict[str, Callable[[MCSManagerClient, str, str], Awaitable[Any]
 }
 
 
+def _is_mcs_message(message: str) -> bool:
+    text = message.strip()
+    lower_text = text.lower()
+    if lower_text.startswith("/mcs"):
+        return False
+    if lower_text == "mcs":
+        return True
+    if not lower_text.startswith("mcs"):
+        return False
+    rest = text[3:].strip()
+    if not rest:
+        return True
+    try:
+        parts = shlex.split(rest, posix=False)
+    except ValueError:
+        return True
+    return bool(parts and _normalize_action(parts[0]) in ACTION_ALIASES.values())
+
+
 def _parse_args(message: str) -> list[str]:
     text = message.strip()
+    lower_text = text.lower()
     for prefix in ("/mcs", "mcs"):
-        if text == prefix:
+        if lower_text == prefix:
             text = ""
             break
-        if text.startswith(f"{prefix} "):
+        if lower_text.startswith(prefix):
             text = text[len(prefix) :].strip()
             break
     if not text:
@@ -406,6 +449,10 @@ def _instance_daemon_id(item: dict[str, Any]) -> str:
     if not daemon_id:
         raise ConfigError("实例数据缺少节点ID。")
     return daemon_id
+
+
+def _is_group_event(event: AstrMessageEvent) -> bool:
+    return bool(collect_event_group_identities(event))
 
 
 def _option_key(event: AstrMessageEvent) -> str:

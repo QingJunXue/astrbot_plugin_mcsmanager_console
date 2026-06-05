@@ -8,7 +8,8 @@ from .errors import ConfigError, PermissionDenied
 class PluginConfig:
     base_url: str
     api_key: str
-    admin_whitelist: frozenset[str]
+    admin_users: frozenset[str]
+    enabled_groups: frozenset[str]
     log_max_lines: int
     show_ids: bool
     overview_font: str
@@ -17,7 +18,9 @@ class PluginConfig:
     def from_astrbot(cls, config: Any) -> "PluginConfig":
         base_url = _read_config(config, "base_url", "").strip().rstrip("/")
         api_key = _read_config(config, "api_key", "").strip()
-        whitelist = _normalize_whitelist(_read_config(config, "admin_whitelist", []))
+        legacy_admin_whitelist = _read_config(config, "admin_whitelist", [])
+        admin_users = _normalize_id_list(_read_config(config, "admin_users", legacy_admin_whitelist))
+        enabled_groups = _normalize_id_list(_read_config(config, "enabled_groups", []))
         log_max_lines = _normalize_log_lines(_read_config(config, "log_max_lines", 50))
         show_ids = _normalize_bool(_read_config(config, "show_ids", True))
         overview_font = str(_read_config(config, "overview_font", "微软雅黑")).strip()
@@ -25,7 +28,8 @@ class PluginConfig:
         return cls(
             base_url=base_url,
             api_key=api_key,
-            admin_whitelist=frozenset(whitelist),
+            admin_users=frozenset(admin_users),
+            enabled_groups=frozenset(enabled_groups),
             log_max_lines=log_max_lines,
             show_ids=show_ids,
             overview_font=overview_font,
@@ -40,25 +44,33 @@ class PluginConfig:
         if missing:
             raise ConfigError(f"插件配置不完整：请先设置 {', '.join(missing)}。")
 
-    def require_admin(self, identities: set[str]) -> None:
-        if not self.admin_whitelist.intersection(identities):
+    def require_admin(self, user_identities: set[str]) -> None:
+        if not self.admin_users.intersection(user_identities):
             raise PermissionDenied("无权限执行该命令。")
 
+    def is_group_enabled(self, group_identities: set[str]) -> bool:
+        return bool(self.enabled_groups.intersection(group_identities))
 
-def collect_event_identities(event: Any) -> set[str]:
+
+def collect_event_user_identities(event: Any) -> set[str]:
     message_obj = getattr(event, "message_obj", None)
     sender = getattr(message_obj, "sender", None)
 
     values = {
         _call_or_attr(event, "get_sender_id"),
-        _call_or_attr(event, "get_platform_name"),
-        getattr(message_obj, "self_id", None),
-        getattr(message_obj, "session_id", None),
-        getattr(message_obj, "group_id", None),
         getattr(sender, "user_id", None),
-        getattr(sender, "nickname", None),
     }
-    return {str(value).strip() for value in values if str(value or "").strip()}
+    return _normalize_identity_values(values)
+
+
+def collect_event_group_identities(event: Any) -> set[str]:
+    message_obj = getattr(event, "message_obj", None)
+
+    values = {
+        _call_or_attr(event, "get_group_id"),
+        getattr(message_obj, "group_id", None),
+    }
+    return _normalize_identity_values(values)
 
 
 def _read_config(config: Any, key: str, default: Any) -> Any:
@@ -72,7 +84,7 @@ def _read_config(config: Any, key: str, default: Any) -> Any:
     return getattr(config, key, default)
 
 
-def _normalize_whitelist(value: Any) -> set[str]:
+def _normalize_id_list(value: Any) -> set[str]:
     if value is None:
         return set()
     if isinstance(value, str):
@@ -81,7 +93,11 @@ def _normalize_whitelist(value: Any) -> set[str]:
         items = value
     else:
         items = [value]
-    return {str(item).strip() for item in items if str(item).strip()}
+    return _normalize_identity_values(items)
+
+
+def _normalize_identity_values(values: Any) -> set[str]:
+    return {str(value).strip() for value in values if str(value or "").strip()}
 
 
 def _normalize_log_lines(value: Any) -> int:

@@ -9,8 +9,13 @@
     "type": "string",
     "default": ""
   },
-  "admin_whitelist": {
-    "description": "允许执行管理命令的用户 ID / 群 ID / 平台 ID。留空表示不允许任何管理命令。",
+  "admin_users": {
+    "description": "管理员用户 ID 列表。管理员可在私聊和已启用群聊执行管理命令。留空表示不允许任何管理命令。",
+    "type": "list",
+    "default": []
+  },
+  "enabled_groups": {
+    "description": "启用插件的群 ID 列表。只控制哪些群聊会响应 mcs 命令，不代表群成员是管理员。留空表示不响应任何群聊命令。",
     "type": "list",
     "default": []
   },
