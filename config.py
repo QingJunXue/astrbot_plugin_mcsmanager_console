@@ -21,12 +21,18 @@ class PluginConfig:
         whitelist = _normalize_whitelist(_read_config(config, "admin_whitelist", []))
         log_max_lines = _normalize_log_lines(_read_config(config, "log_max_lines", 50))
         show_ids = _normalize_bool(_read_config(config, "show_ids", True))
-        overview_font_path = str(_read_config(config, "overview_font_path", "C:/Windows/Fonts/msyh.ttc")).strip()
+        overview_font_path = str(_read_config(config, "overview_font_path", "")).strip()
         overview_font_download_url = str(
             _read_config(
                 config,
                 "overview_font_download_url",
-                "https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
+                "\n".join(
+                    [
+                        "https://gh-proxy.com/https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
+                        "https://ghproxy.net/https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
+                        "https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
+                    ]
+                ),
             )
         ).strip()
 

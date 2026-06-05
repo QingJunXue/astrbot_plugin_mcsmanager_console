@@ -9,8 +9,8 @@ AstrBot 插件：通过 `/mcs` 聊天命令管理 MCSManager。
 - `admin_whitelist`：允许执行管理命令的用户 ID / 群 ID / 平台 ID
 - `log_max_lines`：日志命令最多返回行数
 - `show_ids`：是否在节点列表、实例列表、实例详情中显示 ID；关闭后实例列表中的节点 ID 也会隐藏
-- `overview_font_path`：仪表盘图片字体路径，默认 `C:/Windows/Fonts/msyh.ttc`
-- `overview_font_download_url`：微软雅黑字体直连下载地址，默认 `https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip`
+- `overview_font_path`：仪表盘图片字体路径；留空自动选择，Windows 使用系统微软雅黑，Linux/Docker 自动下载并使用微软雅黑
+- `overview_font_download_url`：非 Windows 环境自动下载微软雅黑的地址；支持多行或英文逗号分隔，默认代理优先、GitHub raw 兜底
 
 ## 简单用法
 
