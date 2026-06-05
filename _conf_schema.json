@@ -1,0 +1,22 @@
+{
+  "base_url": {
+    "description": "MCSManager 面板地址，例如 http://127.0.0.1:23333",
+    "type": "string",
+    "default": ""
+  },
+  "api_key": {
+    "description": "MCSManager API Key，仅保存在配置中，不会在聊天消息中回显。",
+    "type": "string",
+    "default": ""
+  },
+  "admin_whitelist": {
+    "description": "允许执行管理命令的用户 ID / 群 ID / 平台 ID。留空表示不允许任何管理命令。",
+    "type": "list",
+    "default": []
+  },
+  "log_max_lines": {
+    "description": "日志命令单次最多显示的日志行数。",
+    "type": "int",
+    "default": 50
+  }
+}
