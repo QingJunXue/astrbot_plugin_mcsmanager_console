@@ -127,8 +127,13 @@ PROCESS_ACTIONS: dict[str, Callable[[MCSManagerClient, str, str], Awaitable[Any]
 
 def _parse_args(message: str) -> list[str]:
     text = message.strip()
-    if text.startswith("/mcs"):
-        text = text[4:].strip()
+    for prefix in ("/mcs", "mcs"):
+        if text == prefix:
+            text = ""
+            break
+        if text.startswith(f"{prefix} "):
+            text = text[len(prefix) :].strip()
+            break
     if not text:
         return []
     try:
