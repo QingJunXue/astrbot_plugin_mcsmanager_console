@@ -9,7 +9,7 @@ from astrbot.api.star import Context, Star, register
 
 from .client import MCSManagerClient
 from .config import PluginConfig, collect_event_identities
-from .errors import ConfigError, MCSManagerAPIError, MCSManagerConsoleError, PermissionDenied
+from .errors import ConfigError, MCSManagerConsoleError
 from .formatters import (
     HELP_TEXT,
     format_action_result,
