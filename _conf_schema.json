@@ -24,14 +24,17 @@
     "type": "bool",
     "default": true
   },
-  "overview_font_path": {
-    "description": "仪表盘图片字体路径。留空自动选择：Windows 自动使用系统微软雅黑；Linux/Docker 自动下载并使用微软雅黑。",
+  "overview_font": {
+    "description": "仪表盘图片字体。全系统均从插件 Fonts/fonts 目录选择，默认微软雅黑。",
     "type": "string",
-    "default": ""
-  },
-  "overview_font_download_url": {
-    "description": "非 Windows 环境自动下载微软雅黑的地址。支持多行或英文逗号分隔；默认代理优先，GitHub raw 兜底。",
-    "type": "string",
-    "default": "https://gh-proxy.com/https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip\nhttps://ghproxy.net/https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip\nhttps://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip"
+    "default": "微软雅黑",
+    "options": [
+      "微软雅黑",
+      "微软雅黑 粗体",
+      "微软雅黑 Heavy",
+      "微软雅黑 Light",
+      "微软雅黑 Semibold",
+      "微软雅黑 Semilight"
+    ]
   }
 }

@@ -65,7 +65,7 @@ def format_instances(data: Any, *, numbered: bool = False, show_ids: bool = True
         prefix = f"[{index}] " if numbered else "- "
         id_part = f" | ID: {instance_id or '未知'}" if show_ids else ""
         daemon_part = f" | 节点: {daemon_id}" if show_ids and daemon_id else ""
-        lines.append(f"{prefix}{name} | 状态: {_status_text(status)}{id_part}{daemon_part}")
+        lines.append(f"{prefix}{name} | 状态: {_instance_status_text(status)}{id_part}{daemon_part}")
     if numbered:
         lines.append("\n可直接使用编号、实例名或简称操作，例如：/mcs 启动 1")
     return "\n".join(lines)
@@ -85,7 +85,7 @@ def format_instance_detail(data: Any, *, show_ids: bool = True) -> str:
     ]
     if show_ids:
         lines.append(f"ID: {instance_id}")
-    lines.append(f"状态: {_status_text(status)}")
+    lines.append(f"状态: {_instance_status_text(status)}")
     if end_time:
         lines.append(f"到期/结束时间: {end_time}")
     return "\n".join(lines)
@@ -152,9 +152,29 @@ def _status_text(value: Any) -> str:
         "stopped": "已停止",
         "offline": "离线",
         "online": "在线",
-        "1": "运行中",
+    }
+    return mapping.get(text.lower(), text)
+
+
+def _instance_status_text(value: Any) -> str:
+    if value is True:
+        return "运行中"
+    if value is False:
+        return "已停止"
+    text = str(value).strip()
+    mapping = {
+        "-1": "忙碌",
         "0": "已停止",
-        "-1": "未知",
+        "1": "停止中",
+        "2": "启动中",
+        "3": "运行中",
+        "busy": "忙碌",
+        "stopped": "已停止",
+        "stopping": "停止中",
+        "starting": "启动中",
+        "running": "运行中",
+        "offline": "已停止",
+        "online": "运行中",
     }
     return mapping.get(text.lower(), text)
 

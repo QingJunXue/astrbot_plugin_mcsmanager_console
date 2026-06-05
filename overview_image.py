@@ -1,10 +1,5 @@
 from __future__ import annotations
 
-import os
-import platform
-import shutil
-import urllib.request
-import zipfile
 from datetime import datetime
 from pathlib import Path
 from tempfile import gettempdir
@@ -25,21 +20,15 @@ GREEN = (34, 197, 94)
 YELLOW = (245, 158, 11)
 RED = (239, 68, 68)
 PURPLE = (168, 85, 247)
-DEFAULT_FONT_DOWNLOAD_URLS = (
-    "https://gh-proxy.com/https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
-    "https://ghproxy.net/https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
-    "https://raw.githubusercontent.com/CroesusSo/msyh/main/msyh.zip",
-)
-MAX_FONT_DOWNLOAD_SIZE = 32 * 1024 * 1024
 
 
-def render_overview_image(data: Any, *, font_path: str = "", font_download_url: str = "") -> str:
+def render_overview_image(data: Any, *, font_path: str = "msyh") -> str:
     overview = data if isinstance(data, dict) else {}
     remote = _list(overview.get("remote"))
     height = 720 + max(0, len(remote) - 1) * 150
     image = Image.new("RGB", (CARD_WIDTH, height), BG)
     draw = ImageDraw.Draw(image)
-    fonts = _fonts(font_path, font_download_url)
+    fonts = _fonts(font_path)
 
     _draw_header(draw, overview, fonts)
     _draw_summary(draw, overview, remote, fonts)
@@ -170,8 +159,8 @@ def _round_rect(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], color
     draw.rounded_rectangle(box, radius=radius, fill=color)
 
 
-def _fonts(font_path: str = "", font_download_url: str = "") -> dict[str, ImageFont.ImageFont]:
-    candidates = _font_candidates(font_path, font_download_url)
+def _fonts(font_path: str = "msyh") -> dict[str, ImageFont.ImageFont]:
+    candidates = _font_candidates(font_path)
 
     def load(size: int) -> ImageFont.ImageFont:
         for path in candidates:
@@ -192,94 +181,45 @@ def _fonts(font_path: str = "", font_download_url: str = "") -> dict[str, ImageF
     }
 
 
-def _font_candidates(font_path: str, font_download_url: str) -> list[str]:
-    explicit_path = str(font_path or "").strip()
-    downloaded_path = _downloaded_font_path(font_download_url) if not _is_windows() else ""
-    candidates = [explicit_path]
-
-    if _is_windows():
-        candidates.extend(
-            [
-                "C:/Windows/Fonts/msyh.ttc",
-                "C:/Windows/Fonts/msyh.ttf",
-                "C:/Windows/Fonts/simhei.ttf",
-            ]
-        )
-    else:
-        candidates.extend(
-            [
-                downloaded_path,
-                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
-                "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            ]
-        )
-    return [path for path in candidates if path]
+def _font_candidates(font_path: str) -> list[str]:
+    selector = str(font_path or "msyh").strip() or "msyh"
+    return _bundled_font_candidates(selector)
 
 
-def _downloaded_font_path(font_download_url: str) -> str:
-    font_dir = Path(os.environ.get("ASTRBOT_MCSMANAGER_FONT_DIR") or Path(gettempdir()) / "astrbot_plugin_mcsmanager_console" / "fonts")
-    for name in ("msyh.ttf", "msyh.ttc"):
-        existing = font_dir / name
-        if existing.exists():
-            return str(existing)
-
-    font_dir.mkdir(parents=True, exist_ok=True)
-    archive_path = font_dir / "msyh.zip"
-    for url in _font_download_urls(font_download_url):
-        if _download_file(url, archive_path) and _extract_font_archive(archive_path, font_dir):
-            for name in ("msyh.ttf", "msyh.ttc"):
-                extracted = font_dir / name
-                if extracted.exists():
-                    return str(extracted)
-    return ""
+def _bundled_font_candidates(selector: str) -> list[str]:
+    font_dirs = [Path(__file__).resolve().parent / "Fonts", Path(__file__).resolve().parent / "fonts"]
+    font_names = _font_file_names(selector)
+    candidates: list[str] = []
+    for font_dir in font_dirs:
+        for font_name in font_names:
+            path = font_dir / font_name
+            if path.exists():
+                candidates.append(str(path))
+    return candidates
 
 
-def _font_download_urls(font_download_url: str) -> list[str]:
-    configured = str(font_download_url or "").replace("\r", "\n").replace(",", "\n").split("\n")
-    urls = [item.strip() for item in configured if item.strip()]
-    urls.extend(DEFAULT_FONT_DOWNLOAD_URLS)
-    unique_urls: list[str] = []
-    for url in urls:
-        if url not in unique_urls:
-            unique_urls.append(url)
-    return unique_urls
-
-
-def _download_file(url: str, target: Path) -> bool:
-    try:
-        request = urllib.request.Request(url, headers={"User-Agent": "astrbot-plugin-mcsmanager-console/1.0"})
-        with urllib.request.urlopen(request, timeout=20) as response:
-            content_length = int(response.headers.get("Content-Length") or 0)
-            if content_length > MAX_FONT_DOWNLOAD_SIZE:
-                return False
-            with target.open("wb") as file:
-                shutil.copyfileobj(response, file, length=1024 * 1024)
-        return target.exists() and 0 < target.stat().st_size <= MAX_FONT_DOWNLOAD_SIZE
-    except (OSError, ValueError):
-        return False
-
-
-def _extract_font_archive(archive_path: Path, font_dir: Path) -> bool:
-    try:
-        with zipfile.ZipFile(archive_path) as archive:
-            for item in archive.infolist():
-                name = Path(item.filename).name
-                if name.lower() not in {"msyh.ttf", "msyh.ttc"}:
-                    continue
-                target = font_dir / name
-                with archive.open(item) as source, target.open("wb") as output:
-                    shutil.copyfileobj(source, output)
-                return target.exists() and target.stat().st_size > 0
-    except (OSError, zipfile.BadZipFile):
-        return False
-    return False
-
-
-def _is_windows() -> bool:
-    return platform.system().lower() == "windows"
+def _font_file_names(selector: str) -> list[str]:
+    aliases = {
+        "msyh": ["msyh.ttc"],
+        "微软雅黑": ["msyh.ttc"],
+        "microsoft yahei": ["msyh.ttc"],
+        "msyhbd": ["msyhbd.ttc"],
+        "微软雅黑 粗体": ["msyhbd.ttc"],
+        "msyhhv": ["msyhhv.ttc"],
+        "微软雅黑 heavy": ["msyhhv.ttc"],
+        "msyhl": ["msyhl.ttc"],
+        "微软雅黑 light": ["msyhl.ttc"],
+        "msyhsb": ["msyhsb.ttc"],
+        "微软雅黑 semibold": ["msyhsb.ttc"],
+        "msyhsl": ["msyhsl.ttc"],
+        "微软雅黑 semilight": ["msyhsl.ttc"],
+    }
+    normalized = selector.lower()
+    names = aliases.get(normalized, [])
+    if names:
+        return names
+    suffixes = (".ttf", ".ttc", ".otf")
+    return [selector] if selector.lower().endswith(suffixes) else [f"{selector}{suffix}" for suffix in suffixes]
 
 
 def _dict(value: Any) -> dict[str, Any]:

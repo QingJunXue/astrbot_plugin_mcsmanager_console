@@ -117,8 +117,7 @@ class MCSManagerConsolePlugin(Star):
             return Path(
                 render_overview_image(
                     await client.overview(),
-                    font_path=self.config.overview_font_path,
-                    font_download_url=self.config.overview_font_download_url,
+                    font_path=self.config.overview_font,
                 )
             )
         if action == "节点":
