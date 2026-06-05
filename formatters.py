@@ -42,7 +42,7 @@ def format_daemons(data: Any, *, numbered: bool = False) -> str:
         name = _pick(item, "remarks", "name", "ip", default="未命名节点")
         status = _pick(item, "available", "status", "state", default="未知")
         address = _pick(item, "ip", "addr", "address", default="")
-        prefix = f"{index}. " if numbered else "- "
+        prefix = f"[{index}] " if numbered else "- "
         lines.append(f"{prefix}{name} | ID: {daemon_id or '未知'} | 状态: {_status_text(status)}{_suffix(address)}")
     if numbered:
         lines.append("\n可直接用节点编号、节点名或节点ID查看实例，例如：/mcs 实例 1")
@@ -59,7 +59,7 @@ def format_instances(data: Any, *, numbered: bool = False) -> str:
         instance_id = _pick(item, "uuid", "instanceUuid", "id")
         name = _pick(item, "nickname", "name", "config.nickname", default="未命名实例")
         status = _pick(item, "status", "started", "state", default="未知")
-        prefix = f"{index}. " if numbered else "- "
+        prefix = f"[{index}] " if numbered else "- "
         daemon_part = f" | 节点: {daemon_id}" if daemon_id else ""
         lines.append(f"{prefix}{name} | 状态: {_status_text(status)} | ID: {instance_id or '未知'}{daemon_part}")
     if numbered:
